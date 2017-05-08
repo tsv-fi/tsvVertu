@@ -1,0 +1,16 @@
+
+	.obj_article_summary {
+		position: relative;
+	}
+
+	.prLabelLarge{
+		display: block;
+		margin: 20px;
+	}
+	
+	 .prLabelSmall{
+		position: absolute;
+		margin-left: -15px;
+		top: 0;
+		left: 0;		
+	}
