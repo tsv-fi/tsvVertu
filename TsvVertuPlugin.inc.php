@@ -24,12 +24,12 @@ class TsvVertuPlugin extends GenericPlugin {
 	 * @return boolean True if plugin initialized successfully; if false,
 	 * 	the plugin will not be registered.
 	 */
-	function register($category, $path) {
+	function register($category, $path, $mainContextId = NULL) {
 		$success = parent::register($category, $path);
 		if ($success && $this->getEnabled()) {
 			
 			// Handle metadata forms
-			HookRegistry::register('TemplateManager::display', array($this, 'metadataFieldEdit'));
+			HookRegistry::register('TemplateManager::fetch', array($this, 'metadataFieldEdit'));
 			#HookRegistry::register('issueentrypublicationmetadataform::initdata', array($this, 'metadataInitData'));
 			HookRegistry::register('issueentrypublicationmetadataform::readuservars', array($this, 'metadataReadUserVars'));
 			HookRegistry::register('issueentrypublicationmetadataform::execute', array($this, 'metadataExecute'));
@@ -102,45 +102,35 @@ class TsvVertuPlugin extends GenericPlugin {
 	 */
 	function metadataFieldEdit($hookName, $params) {
 		$template =& $params[1];
-		
 		if ($template != "controllers/tab/issueEntry/form/publicationMetadataFormFields.tpl") return false;
 		$templateMgr =& $params[0];		
-		$templateMgr->register_outputfilter(array($this, 'formFilter'));
-		
+		$templateMgr->registerFilter("output", array($this, 'formFilter'));
 		return false;
-		
 	}
-
 
 	/**
 	 * Output filter adds form field
 	 */
-	function formFilter($output, &$templateMgr) {
-		
+	function formFilter($output, $templateMgr) {
 		if (preg_match('/<div class=\"section formButtons/', $output, $matches, PREG_OFFSET_CAPTURE) AND !strpos($output, 'id="vertuLabel"')) {
 			$match = $matches[0][0];
-			$offset = $matches[0][1];				
-			
+			$offset = $matches[0][1];
 			$fbv = $templateMgr->getFBV();
 			$form = $fbv->getForm();
 			$article = $form->getSubmission();		
-			$articleVertuLabel = $article->getData('vertuLabel');
-						
+			$articleVertuLabel = $article->getData('vertuLabel');		
 			$templateMgr->assign(array(
 				'vertuLabel' => $articleVertuLabel,
 			));
-			
-			$newOutput = substr($output, 0, $offset);	
-			$newOutput .= $templateMgr->fetch($this->getTemplatePath() . 'vertuEdit.tpl');
+			$newOutput = substr($output, 0, $offset);
+			$newOutput .= $templateMgr->fetch($this->getTemplateResource('vertuEdit.tpl'));
 			$newOutput .= substr($output, $offset);
 			$output = $newOutput;
-			
+			$templateMgr->unregisterFilter('output', array($this, 'formFilter'));
 		}
-		$templateMgr->unregister_outputfilter('formFilter');
 		return $output;
 	}	
-	
-	
+
 	/**
 	 * Add vertuLabel element to the article
 	 */

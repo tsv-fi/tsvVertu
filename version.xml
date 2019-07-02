@@ -13,8 +13,8 @@
 <version>
 	<application>tsvVertu</application>
 	<type>plugins.generic</type>
-	<release>1.0.0.2</release>
-	<date>2017-01-30</date>
+	<release>1.0.0.3</release>
+	<date>2019-01-07</date>
 	<lazy-load>1</lazy-load>
 	<class>TsvVertuPlugin</class>
 </version>
