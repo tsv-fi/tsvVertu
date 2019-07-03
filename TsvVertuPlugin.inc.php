@@ -175,7 +175,6 @@ class TsvVertuPlugin extends GenericPlugin {
 		return false;
 	}
 
-	
 	/**
 	 * Insert label to public TOC
 	 */
@@ -183,33 +182,29 @@ class TsvVertuPlugin extends GenericPlugin {
 		if ($this->getEnabled()) {
 			$templateMgr =& $params[1];
 			$output =& $params[2];
-			
-			$article = $templateMgr->get_template_vars('article');
-			
+			$article = $templateMgr->getTemplateVars('article');
 			if ($article->getData('vertuLabel')){
 				$output .= '<div class="prLabelSmall"><img src="' . Request::getBaseUrl() . '/' . $this->getPluginPath() . '/images/prlabel-small.jpg" /></div>';
 			}
-			
 		}
 		return false;
-	}	
+	}
 	
 	/**
 	 * Insert label to Article landing page
 	 */
 	function insertArticleLabel($hookName, $params) {
 		if ($this->getEnabled()) {
-			$templateMgr =& $params[1];
+			$templateMgr = $params[1];
 			$output =& $params[2];
-			$article = $templateMgr->get_template_vars('article');			
-
+			$request = Application::getRequest();
+			$article = $templateMgr->getTemplateVars('article');
 			if ($article->getData('vertuLabel')){
-				$output .= '<a href="http://www.tsv.fi/tunnus"><img src="' . Request::getBaseUrl() . '/' . $this->getPluginPath() . '/images/prlabel-large.jpg" class="prLabelLarge" /></a>';
+				$output .= '<a href="http://www.tsv.fi/tunnus"><img src="' . $request->getBaseUrl() . '/' . $this->getPluginPath() . '/images/prlabel-large.jpg" class="prLabelLarge" /></a>';
 			}
 		}
 		return false;
-	}	
-	
+	}
 
 	/**
 	 * Insert stylesheet
