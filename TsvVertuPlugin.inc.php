@@ -15,7 +15,6 @@
 
 import('lib.pkp.classes.plugins.GenericPlugin');
 
-
 class TsvVertuPlugin extends GenericPlugin {
 
 	/**
@@ -27,7 +26,7 @@ class TsvVertuPlugin extends GenericPlugin {
 	function register($category, $path, $mainContextId = NULL) {
 		$success = parent::register($category, $path);
 		if ($success && $this->getEnabled()) {
-			
+
 			// Handle metadata forms
 			HookRegistry::register('TemplateManager::fetch', array($this, 'metadataFieldEdit'));
 			#HookRegistry::register('issueentrypublicationmetadataform::initdata', array($this, 'metadataInitData'));
@@ -35,18 +34,18 @@ class TsvVertuPlugin extends GenericPlugin {
 			HookRegistry::register('issueentrypublicationmetadataform::execute', array($this, 'metadataExecute'));
 			HookRegistry::register('articledao::getAdditionalFieldNames', array($this, 'articleSubmitGetFieldNames'));
 
-			// Handle bulk edit
+			// TODO Handle bulk edit
 			#HookRegistry::register('Templates::Management::Settings::website', array($this, 'callbackShowWebsiteSettingsTabs'));
 			#HookRegistry::register('LoadComponentHandler', array($this, 'setupGridHandler'));
-			
+
 			// Handle display in frontend
 			HookRegistry::register('Templates::Article::Main', array($this, 'insertArticleLabel'));
 			HookRegistry::register('Templates::Issue::Issue::Article', array($this, 'insertTocLabel'));
-			
+
 			// Add stylesheet
-			HookRegistry::register('TemplateManager::display',array($this, 'insertStylesheet'));			
-			
-			// Handle OAI
+			HookRegistry::register('TemplateManager::display',array($this, 'insertStylesheet'));		
+
+			// TODO Handle OAI
 
 		}
 		return $success;
@@ -62,7 +61,6 @@ class TsvVertuPlugin extends GenericPlugin {
 		$output .= '<li><a name="tsvVertu" href="' . $dispatcher->url($request, ROUTE_COMPONENT, null, 'plugins.generic.tsvVertu.controllers.grid.TsvVertuGridHandler', 'index') . '">' . __('plugins.generic.tsvVertu.displayName') . '</a></li>';
 		return false;
 	}
-	
 
 	/**
 	 * Permit requests to the grid handler
@@ -75,8 +73,7 @@ class TsvVertuPlugin extends GenericPlugin {
 			return true;
 		}
 		return false;
-	}	
-	
+	}
 
 	/**
 	 * @copydoc Plugin::getDisplayName()
@@ -91,7 +88,6 @@ class TsvVertuPlugin extends GenericPlugin {
 	function getDescription() {
 		return __('plugins.generic.tsvVertu.description');
 	}
-
 
 	/*
 	 * Metadata
@@ -146,7 +142,6 @@ class TsvVertuPlugin extends GenericPlugin {
 	function metadataExecute($hookName, $params) {
 		$form =& $params[0];
 		$article = $form->getSubmission();
-
 		$formVertuLabel = $form->getData('vertuLabel');
 		$article->setData('vertuLabel', $formVertuLabel);
 		return false;
@@ -156,7 +151,6 @@ class TsvVertuPlugin extends GenericPlugin {
 	 * Init article vertuLabel
 	 */
 	function metadataInitData($hookName, $params) {
-
 		$form =& $params[0];
 		$article = $form->getSubmission();		
 		$articleVertuLabel = $article->getData('vertuLabel');
@@ -168,8 +162,6 @@ class TsvVertuPlugin extends GenericPlugin {
 	 * Concern vertuLabel field in the form
 	 */
 	function metadataReadUserVars($hookName, $params) {
-
-		
 		$userVars =& $params[1];
 		$userVars[] = 'vertuLabel';
 		return false;
@@ -182,14 +174,15 @@ class TsvVertuPlugin extends GenericPlugin {
 		if ($this->getEnabled()) {
 			$templateMgr =& $params[1];
 			$output =& $params[2];
+			$request = Application::getRequest();
 			$article = $templateMgr->getTemplateVars('article');
 			if ($article->getData('vertuLabel')){
-				$output .= '<div class="prLabelSmall"><img src="' . Request::getBaseUrl() . '/' . $this->getPluginPath() . '/images/prlabel-small.jpg" /></div>';
+				$output .= '<div class="prLabelSmall"><img src="' . $request->getBaseUrl() . '/' . $this->getPluginPath() . '/images/prlabel-small.jpg" /></div>';
 			}
 		}
 		return false;
 	}
-	
+
 	/**
 	 * Insert label to Article landing page
 	 */
@@ -219,9 +212,7 @@ class TsvVertuPlugin extends GenericPlugin {
 		$templateMgr->addStylesheet('tsvVertu', Request::getBaseUrl() . '/' . $this->getPluginPath() . '/tsvVertu.css');		
 		
 		return false;
-	}	
-	
-	
+	}
 
 }
 ?>
