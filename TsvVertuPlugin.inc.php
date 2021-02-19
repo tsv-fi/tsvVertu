@@ -27,23 +27,17 @@ class TsvVertuPlugin extends GenericPlugin {
 		$success = parent::register($category, $path);
 		if ($success && $this->getEnabled()) {
 
-			// Handle metadata forms
-			HookRegistry::register('TemplateManager::fetch', array($this, 'metadataFieldEdit'));
-			#HookRegistry::register('issueentrypublicationmetadataform::initdata', array($this, 'metadataInitData'));
-			HookRegistry::register('issueentrypublicationmetadataform::readuservars', array($this, 'metadataReadUserVars'));
-			HookRegistry::register('issueentrypublicationmetadataform::execute', array($this, 'metadataExecute'));
-			HookRegistry::register('articledao::getAdditionalFieldNames', array($this, 'articleSubmitGetFieldNames'));
-
-			// TODO Handle bulk edit
-			#HookRegistry::register('Templates::Management::Settings::website', array($this, 'callbackShowWebsiteSettingsTabs'));
-			#HookRegistry::register('LoadComponentHandler', array($this, 'setupGridHandler'));
-
 			// Handle display in frontend
 			HookRegistry::register('Templates::Article::Main', array($this, 'insertArticleLabel'));
 			HookRegistry::register('Templates::Issue::Issue::Article', array($this, 'insertTocLabel'));
 
 			// Add stylesheet
-			HookRegistry::register('TemplateManager::display',array($this, 'insertStylesheet'));		
+			HookRegistry::register('TemplateManager::display',array($this, 'insertStylesheet'));
+
+			// Handle schema and form
+			HookRegistry::register('Schema::get::publication', array($this, 'addToSchema'));
+			HookRegistry::register('Form::config::before', array($this, 'addToForm'));
+			HookRegistry::register('Publication::version', [$this, 'versionPublication']);
 
 			// TODO Handle OAI
 
@@ -51,29 +45,6 @@ class TsvVertuPlugin extends GenericPlugin {
 		return $success;
 	}
 	
-	/**
-	 * Extend the website settings tabs to include vertu page
-	 */
-	function callbackShowWebsiteSettingsTabs($hookName, $args) {
-		$output =& $args[2];
-		$request =& Registry::get('request');
-		$dispatcher = $request->getDispatcher();
-		$output .= '<li><a name="tsvVertu" href="' . $dispatcher->url($request, ROUTE_COMPONENT, null, 'plugins.generic.tsvVertu.controllers.grid.TsvVertuGridHandler', 'index') . '">' . __('plugins.generic.tsvVertu.displayName') . '</a></li>';
-		return false;
-	}
-
-	/**
-	 * Permit requests to the grid handler
-	 */
-	function setupGridHandler($hookName, $params) {
-		$component =& $params[0];
-		if ($component == 'plugins.generic.tsvVertu.controllers.grid.TsvVertuGridHandler') {
-			import($component);
-			TsvVertuGridHandler::setPlugin($this);
-			return true;
-		}
-		return false;
-	}
 
 	/**
 	 * @copydoc Plugin::getDisplayName()
@@ -89,82 +60,71 @@ class TsvVertuPlugin extends GenericPlugin {
 		return __('plugins.generic.tsvVertu.description');
 	}
 
-	/*
-	 * Metadata
-	 */
-
 	/**
-	 * Insert vertuLabel field into schedule publication form
+	 * Add a property to the submission schema
+	 *
+	 * @param $hookName string `Schema::get::submission`
+	 * @param $args [[
+	 * 	@option object Submission schema
+	 * ]]
 	 */
-	function metadataFieldEdit($hookName, $params) {
-		$template =& $params[1];
-		if ($template != "controllers/tab/issueEntry/form/publicationMetadataFormFields.tpl") return false;
-		$templateMgr =& $params[0];		
-		$templateMgr->registerFilter("output", array($this, 'formFilter'));
-		return false;
+	public function addToSchema($hookName, $args) {
+		$schema = $args[0];
+		$prop = '{
+			"type": "boolean",
+			"apiSummary": true,
+			"validation": [
+				"nullable"
+			]
+		}';
+		$schema->properties->vertuLabel = json_decode($prop);
 	}
 
 	/**
-	 * Output filter adds form field
+	 * Add a form field to a form
+	 *
+	 * @param $hookName string `Form::config::before`
+	 * @param $form FormHandler
 	 */
-	function formFilter($output, $templateMgr) {
-		if (preg_match('/<div class=\"section formButtons/', $output, $matches, PREG_OFFSET_CAPTURE) AND !strpos($output, 'id="vertuLabel"')) {
-			$match = $matches[0][0];
-			$offset = $matches[0][1];
-			$fbv = $templateMgr->getFBV();
-			$form = $fbv->getForm();
-			$article = $form->getSubmission();		
-			$articleVertuLabel = $article->getData('vertuLabel');		
-			$templateMgr->assign(array(
-				'vertuLabel' => $articleVertuLabel,
-			));
-			$newOutput = substr($output, 0, $offset);
-			$newOutput .= $templateMgr->fetch($this->getTemplateResource('vertuEdit.tpl'));
-			$newOutput .= substr($output, $offset);
-			$output = $newOutput;
-			$templateMgr->unregisterFilter('output', array($this, 'formFilter'));
+	public function addtoForm($hookName, $form) {
+		if (!defined('FORM_ISSUE_ENTRY') || $form->id !== FORM_ISSUE_ENTRY) {
+			return;
 		}
-		return $output;
-	}	
 
-	/**
-	 * Add vertuLabel element to the article
-	 */
-	function articleSubmitGetFieldNames($hookName, $params) {
-		$fields =& $params[1];
-		$fields[] = 'vertuLabel';
-		return false;
+		$request = Application::getRequest();
+		$templateMgr = TemplateManager::getManager($request);
+		$submission = $templateMgr->get_template_vars('submission');
+
+		if (!$submission) {
+			return;
+		}
+
+		$form->addField(new \PKP\components\forms\FieldOptions('vertuLabel', [
+			'label' => __('plugins.generic.tsvVertu.vertuLabel.name'),
+			'groupId' => 'publishing',
+			'options' => [
+				['value' => true, 'label' => __('plugins.generic.tsvVertu.vertuLabel.description')]
+			],
+			'value' => $submission->getCurrentPublication()->getData('vertuLabel'),
+		]));
 	}
 
 	/**
-	 * Set article vertuLabel
+	 * Copy vertuLabel value when a new version is created
+	 *
+	 * @param $hookName string
+	 * @param $args array [
+	 *		@option Publication The new version of the publication
+	 *		@option Publication The old version of the publication
+	 *		@option Request
+	 * ]
 	 */
-	function metadataExecute($hookName, $params) {
-		$form =& $params[0];
-		$article = $form->getSubmission();
-		$formVertuLabel = $form->getData('vertuLabel');
-		$article->setData('vertuLabel', $formVertuLabel);
-		return false;
-	}
-
-	/**
-	 * Init article vertuLabel
-	 */
-	function metadataInitData($hookName, $params) {
-		$form =& $params[0];
-		$article = $form->getSubmission();		
-		$articleVertuLabel = $article->getData('vertuLabel');
-		$form->setData('vertuLabel', $articleVertuLabel);
-		return false;
-	}
-
-	/**
-	 * Concern vertuLabel field in the form
-	 */
-	function metadataReadUserVars($hookName, $params) {
-		$userVars =& $params[1];
-		$userVars[] = 'vertuLabel';
-		return false;
+	public function versionPublication($hookName, $args) {
+		$newPublication = $args[0];
+		$oldPublication = $args[1];
+		if ($vertuLabel = $oldPublication->getData('vertuLabel')) {
+			$newPublication->setData('vertuLabel', $vertuLabel);
+		}
 	}
 
 	/**
@@ -175,8 +135,8 @@ class TsvVertuPlugin extends GenericPlugin {
 			$templateMgr =& $params[1];
 			$output =& $params[2];
 			$request = Application::getRequest();
-			$article = $templateMgr->getTemplateVars('article');
-			if ($article->getData('vertuLabel')){
+			$publication = $templateMgr->getTemplateVars('publication');
+			if ($publication->getData('vertuLabel')){
 				$output .= '<div class="prLabelSmall"><img src="' . $request->getBaseUrl() . '/' . $this->getPluginPath() . '/images/prlabel-small.jpg" /></div>';
 			}
 		}
@@ -191,8 +151,8 @@ class TsvVertuPlugin extends GenericPlugin {
 			$templateMgr = $params[1];
 			$output =& $params[2];
 			$request = Application::getRequest();
-			$article = $templateMgr->getTemplateVars('article');
-			if ($article->getData('vertuLabel')){
+			$publication = $templateMgr->getTemplateVars('publication');
+			if ($publication->getData('vertuLabel')){
 				$output .= '<a href="http://www.tsv.fi/tunnus"><img src="' . $request->getBaseUrl() . '/' . $this->getPluginPath() . '/images/prlabel-large.jpg" class="prLabelLarge" /></a>';
 			}
 		}
@@ -203,16 +163,21 @@ class TsvVertuPlugin extends GenericPlugin {
 	 * Insert stylesheet
 	 */
 	function insertStylesheet($hookName, $params) {
-
 		$template = $params[1];
-			
+		$request = PKPApplication::get()->getRequest();
+
 		if ($template != 'frontend/pages/issue.tpl' && $template != 'frontend/pages/article.tpl' && $template != 'frontend/pages/indexJournal.tpl') return false;
 		
 		$templateMgr = $params[0];
-		$templateMgr->addStylesheet('tsvVertu', Request::getBaseUrl() . '/' . $this->getPluginPath() . '/tsvVertu.css');		
+		$templateMgr->addStylesheet(
+			'tsvVertu', 
+			$request->getBaseUrl() . '/' . $this->getPluginPath() . '/tsvVertu.css',
+			array(
+				'contexts' => array('frontend')
+			)
+		);
 		
 		return false;
 	}
-
 }
 ?>
