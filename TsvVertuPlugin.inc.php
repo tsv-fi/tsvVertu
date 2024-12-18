@@ -36,6 +36,7 @@ class TsvVertuPlugin extends GenericPlugin {
 
 			// Handle schema and form
 			HookRegistry::register('Schema::get::publication', array($this, 'addToSchema'));
+			HookRegistry::register('Schema::get::submission', array($this, 'addToSchema'));
 			HookRegistry::register('Form::config::before', array($this, 'addToForm'));
 			HookRegistry::register('Publication::version', [$this, 'versionPublication']);
 
@@ -44,7 +45,7 @@ class TsvVertuPlugin extends GenericPlugin {
 		}
 		return $success;
 	}
-	
+
 
 	/**
 	 * @copydoc Plugin::getDisplayName()
@@ -91,7 +92,7 @@ class TsvVertuPlugin extends GenericPlugin {
 			return;
 		}
 
-		$request = Application::getRequest();
+		$request = Application::get()->getRequest();
 		$templateMgr = TemplateManager::getManager($request);
 		$submission = $templateMgr->get_template_vars('submission');
 
@@ -134,9 +135,9 @@ class TsvVertuPlugin extends GenericPlugin {
 		if ($this->getEnabled()) {
 			$templateMgr =& $params[1];
 			$output =& $params[2];
-			$request = Application::getRequest();
-			$publication = $templateMgr->getTemplateVars('publication');
-			if ($publication->getData('vertuLabel')){
+			$request = Application::get()->getRequest();
+			$article = $templateMgr->getTemplateVars('article');
+			if ($article->getData('vertuLabel') || $article->getCurrentPublication()->getData('vertuLabel')){
 				$output .= '<div class="prLabelSmall"><img src="' . $request->getBaseUrl() . '/' . $this->getPluginPath() . '/images/prlabel-small.jpg" /></div>';
 			}
 		}
@@ -150,9 +151,10 @@ class TsvVertuPlugin extends GenericPlugin {
 		if ($this->getEnabled()) {
 			$templateMgr = $params[1];
 			$output =& $params[2];
-			$request = Application::getRequest();
-			$publication = $templateMgr->getTemplateVars('publication');
-			if ($publication->getData('vertuLabel')){
+			$request = Application::get()->getRequest();
+			$article = $templateMgr->getTemplateVars('article');
+
+			if ($article->getData('vertuLabel') || $article->getCurrentPublication()->getData('vertuLabel')){
 				$output .= '<a href="http://www.tsv.fi/tunnus"><img src="' . $request->getBaseUrl() . '/' . $this->getPluginPath() . '/images/prlabel-large.jpg" class="prLabelLarge" /></a>';
 			}
 		}
@@ -164,19 +166,19 @@ class TsvVertuPlugin extends GenericPlugin {
 	 */
 	function insertStylesheet($hookName, $params) {
 		$template = $params[1];
-		$request = PKPApplication::get()->getRequest();
+		$request = Application::get()->getRequest();
 
-		if ($template != 'frontend/pages/issue.tpl' && $template != 'frontend/pages/article.tpl' && $template != 'frontend/pages/indexJournal.tpl') return false;
-		
+		if ($template != 'frontend/pages/search.tpl' && $template != 'frontend/pages/issue.tpl' && $template != 'frontend/pages/article.tpl' && $template != 'frontend/pages/indexJournal.tpl') return false;
+
 		$templateMgr = $params[0];
 		$templateMgr->addStylesheet(
-			'tsvVertu', 
+			'tsvVertu',
 			$request->getBaseUrl() . '/' . $this->getPluginPath() . '/tsvVertu.css',
 			array(
 				'contexts' => array('frontend')
 			)
 		);
-		
+
 		return false;
 	}
 }
