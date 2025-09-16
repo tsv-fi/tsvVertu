@@ -30,6 +30,7 @@ class TsvVertuPlugin extends GenericPlugin {
 			// Handle display in frontend
 			HookRegistry::register('Templates::Article::Main', array($this, 'insertArticleLabel'));
 			HookRegistry::register('Templates::Issue::Issue::Article', array($this, 'insertTocLabel'));
+			HookRegistry::register('Templates::Catalog::Book::Main', array($this, 'insertBookLabel'));
 
 			// Add stylesheet
 			HookRegistry::register('TemplateManager::display',array($this, 'insertStylesheet'));
@@ -155,6 +156,23 @@ class TsvVertuPlugin extends GenericPlugin {
 			$article = $templateMgr->getTemplateVars('article');
 
 			if ($article->getData('vertuLabel') || $article->getCurrentPublication()->getData('vertuLabel')){
+				$output .= '<a href="http://www.tsv.fi/tunnus"><img src="' . $request->getBaseUrl() . '/' . $this->getPluginPath() . '/images/prlabel-large.jpg" class="prLabelLarge" /></a>';
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Insert label to Book landing page
+	 */
+	function insertBookLabel($hookName, $params) {
+		if ($this->getEnabled()) {
+			$templateMgr = $params[1];
+			$output =& $params[2];
+			$request = Application::get()->getRequest();
+			$publishedSubmission = $templateMgr->getTemplateVars('publishedSubmission');
+
+			if ($publishedSubmission->getData('vertuLabel') || $publishedSubmission->getCurrentPublication()->getData('vertuLabel')){
 				$output .= '<a href="http://www.tsv.fi/tunnus"><img src="' . $request->getBaseUrl() . '/' . $this->getPluginPath() . '/images/prlabel-large.jpg" class="prLabelLarge" /></a>';
 			}
 		}
