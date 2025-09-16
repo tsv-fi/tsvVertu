@@ -1,11 +1,11 @@
 <?php
 
 /**
- * @file plugins/generic/tsvVertu/TsvVertuPlugin.inc.php
+ * @file plugins/generic/tsvVertu/TsvVertuPlugin.php
  *
- * Copyright (c) 2014-2017 Simon Fraser University
- * Copyright (c) 2003-2017 John Willinsky
- * Distributed under the GNU GPL v2. For full terms see the file docs/COPYING.
+ * Copyright (c) 2014-2025 Simon Fraser University
+ * Copyright (c) 2003-2025 John Willinsky
+ * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
  *
  * @class TsvVertuPlugin
  * @ingroup plugins_generic_tsvVertu
@@ -13,7 +13,12 @@
  * @brief TsvVertu plugin class
  */
 
-import('lib.pkp.classes.plugins.GenericPlugin');
+namespace APP\plugins\generic\tsvVertu;
+
+use APP\core\Application;
+use APP\template\TemplateManager;
+use PKP\plugins\GenericPlugin;
+use PKP\plugins\Hook;
 
 class TsvVertuPlugin extends GenericPlugin {
 
@@ -28,18 +33,18 @@ class TsvVertuPlugin extends GenericPlugin {
 		if ($success && $this->getEnabled()) {
 
 			// Handle display in frontend
-			HookRegistry::register('Templates::Article::Main', array($this, 'insertArticleLabel'));
-			HookRegistry::register('Templates::Issue::Issue::Article', array($this, 'insertTocLabel'));
-			HookRegistry::register('Templates::Catalog::Book::Main', array($this, 'insertBookLabel'));
+			Hook::add('Templates::Article::Main', array($this, 'insertArticleLabel'));
+			Hook::add('Templates::Issue::Issue::Article', array($this, 'insertTocLabel'));
+			Hook::add('Templates::Catalog::Book::Main', array($this, 'insertBookLabel'));
 
 			// Add stylesheet
-			HookRegistry::register('TemplateManager::display',array($this, 'insertStylesheet'));
+			Hook::add('TemplateManager::display',array($this, 'insertStylesheet'));
 
 			// Handle schema and form
-			HookRegistry::register('Schema::get::publication', array($this, 'addToSchema'));
-			HookRegistry::register('Schema::get::submission', array($this, 'addToSchema'));
-			HookRegistry::register('Form::config::before', array($this, 'addToForm'));
-			HookRegistry::register('Publication::version', [$this, 'versionPublication']);
+			Hook::add('Schema::get::publication', array($this, 'addToSchema'));
+			Hook::add('Schema::get::submission', array($this, 'addToSchema'));
+			Hook::add('Form::config::before', array($this, 'addToForm'));
+			Hook::add('Publication::version', [$this, 'versionPublication']);
 
 			// TODO Handle OAI
 
@@ -89,13 +94,14 @@ class TsvVertuPlugin extends GenericPlugin {
 	 * @param $form FormHandler
 	 */
 	public function addtoForm($hookName, $form) {
-		if (!defined('FORM_ISSUE_ENTRY') || $form->id !== FORM_ISSUE_ENTRY) {
+
+		if ((!defined('FORM_ISSUE_ENTRY') || $form->id !== FORM_ISSUE_ENTRY) && (!defined('FORM_CATALOG_ENTRY') || $form->id !== FORM_CATALOG_ENTRY)) {
 			return;
 		}
 
 		$request = Application::get()->getRequest();
 		$templateMgr = TemplateManager::getManager($request);
-		$submission = $templateMgr->get_template_vars('submission');
+		$submission = $templateMgr->getTemplateVars('submission');
 
 		if (!$submission) {
 			return;

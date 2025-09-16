@@ -1,18 +1,20 @@
 <?php
 
 /**
- * @file TsvVertuHandler.inc.php
+ * @file TsvVertuHandler.php
  *
- * Copyright (c) 2014-2017 Simon Fraser University
- * Copyright (c) 2003-2017 John Willinsky
- * Distributed under the GNU GPL v2. For full terms see the file docs/COPYING.
+ * Copyright (c) 2014-2025 Simon Fraser University
+ * Copyright (c) 2003-2025 John Willinsky
+ * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
  *
  * @package plugins.generic.tsvVertu
  * @class TsvVertuHandler
  * Find static page content and display it when requested.
  */
 
-import('classes.handler.Handler');
+namespace APP\plugins\generic\tsvVertu;
+
+use PKP\core\Handler;
 
 class TsvVertuHandler extends Handler {
 	/** @var TsvVertuPlugin */
